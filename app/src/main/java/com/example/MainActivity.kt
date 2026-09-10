@@ -77,7 +77,7 @@ fun MayaApp(repository: MayaRepository) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: "splash"
 
-    val mainNavigationRoutes = setOf("home", "chat", "agents", "projects", "settings")
+    val mainNavigationRoutes = setOf("home", "chat", "agents", "projects", "tools", "profile", "settings")
     val showBottomBar = currentRoute in mainNavigationRoutes
 
     var pendingChatPrompt by remember { mutableStateOf<String?>(null) }
@@ -88,12 +88,17 @@ fun MayaApp(repository: MayaRepository) {
                 MayaBottomBar(
                     currentRoute = currentRoute,
                     onNavigate = { targetRoute ->
-                        navController.navigate(targetRoute) {
-                            popUpTo("home") {
-                                saveState = true
+                        if (targetRoute == "voice") {
+                            navController.navigate("voice")
+                        } else {
+                            val resolvedRoute = if (targetRoute == "tools") "projects" else targetRoute
+                            navController.navigate(resolvedRoute) {
+                                popUpTo("home") {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
                         }
                     }
                 )
@@ -205,6 +210,21 @@ fun MayaApp(repository: MayaRepository) {
                 }
 
                 composable("projects") {
+                    ToolsProjectsScreen(
+                        projects = projects,
+                        tools = repository.defaultTools,
+                        onCreateProject = { title, desc, cat, agentId ->
+                            repository.addProject(title, desc, cat, agentId)
+                        },
+                        onDeleteProject = { id -> repository.deleteProject(id) },
+                        onLaunchToolPrompt = { toolPrompt ->
+                            pendingChatPrompt = toolPrompt
+                            navController.navigate("chat")
+                        }
+                    )
+                }
+
+                composable("tools") {
                     ToolsProjectsScreen(
                         projects = projects,
                         tools = repository.defaultTools,
